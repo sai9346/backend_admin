@@ -19,6 +19,28 @@ const getAllUsers = async (req, res) => {
     }
 };
 
+// Get User Profile
+const getUserProfile = async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id)
+        .populate('plan')
+        .populate('usageHistory')
+        .populate('billingHistory');
+  
+      if (!user) return res.status(404).json({ message: 'User not found' });
+  
+      const remainingQuotas = {
+        jobPosts: user.jobPostLimit - user.jobPostsUsed,
+        candidateSearches: user.candidateSearchLimit - user.candidateSearchesUsed,
+      };
+  
+      res.status(200).json({ user, remainingQuotas });
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      res.status(500).json({ error: err.message });
+    }
+  };
+
 // Get Usage History
 const getUserUsageHistory = async (req, res) => {
     try {
@@ -33,24 +55,27 @@ const getUserUsageHistory = async (req, res) => {
     }
 };
 
-// Get User Profile
-const getUserProfile = async (req, res) => {
+// Update User Plan
+const updateUserPlan = async (req, res) => {
+    const { id } = req.params;
+    const { planId } = req.body; // Assuming planId is sent instead of name
+
+    // Validate input
+    if (!planId) {
+        return res.status(400).json({ message: 'Plan ID is required' });
+    }
+
     try {
-        const user = await User.findById(req.params.id)
-            .populate('plan')
-            .populate('usageHistory')
-            .populate('billingHistory');
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { plan: new mongoose.Types.ObjectId(planId) }, // Update the entire plan field
+            { new: true }
+        );
 
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        const remainingQuotas = {
-            jobPosts: user.jobPostLimit - user.jobPostsUsed,
-            candidateSearches: user.candidateSearchLimit - user.candidateSearchesUsed,
-        };
-
-        res.status(200).json({ user, remainingQuotas });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating user plan', error: error.message });
     }
 };
 
@@ -126,5 +151,6 @@ module.exports = {
     getAllUsers,
     getUserUsageHistory,
     getUserProfile,
+    updateUserPlan,
     insertDummyData,
 };

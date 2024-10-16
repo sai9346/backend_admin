@@ -7,6 +7,7 @@ router.get('/', getAllUsers); // Get all users
 router.get('/:id/usage-history', getUserUsageHistory); // Get usage history by user ID
 router.get('/:id/profile', getUserProfile); // Get user profile by user ID
 
+
 // Logging for dummy data insertion
 router.post('/dummy-data', (req, res, next) => {
     console.log('Dummy data insertion request received'); // Log the request

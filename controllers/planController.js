@@ -1,10 +1,11 @@
+const mongoose = require('mongoose');
 const Plan = require('../models/Plan');
-const User = require('../models/User'); // Assuming a User model exists
+const Feature = require('../models/Feature');
 
 // View All Plans
 const viewPlans = async (req, res) => {
     try {
-        const plans = await Plan.find().populate('features'); // Populate feature details if needed
+        const plans = await Plan.find().populate('features');
         res.status(200).json(plans);
     } catch (err) {
         console.error('Failed to view plans:', err.message);
@@ -16,7 +17,6 @@ const viewPlans = async (req, res) => {
 const createPlan = async (req, res) => {
     const { name, description, price, features } = req.body;
 
-    // Check if the provided name is valid based on enum
     if (!['Basic', 'Premium', 'VIP'].includes(name)) {
         return res.status(400).json({ message: 'Invalid plan name provided.' });
     }
@@ -24,7 +24,6 @@ const createPlan = async (req, res) => {
     try {
         const plan = new Plan({ name, description, price, features });
         await plan.save();
-        console.log(`Success: Plan "${name}" created.`);
         res.status(201).json({ message: 'Plan created successfully', plan });
     } catch (err) {
         console.error('Failed to create plan:', err.message);
@@ -35,15 +34,19 @@ const createPlan = async (req, res) => {
 // Update an Existing Plan
 const updatePlan = async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, features } = req.body;
+    const { name, description, price } = req.body;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid plan ID provided.' });
+        }
+
         const updatedPlan = await Plan.findByIdAndUpdate(
             id,
-            { name, description, price, features },
+            { name, description, price },
             { new: true, runValidators: true }
         );
-        
+
         if (!updatedPlan) {
             return res.status(404).json({ message: 'Plan not found' });
         }
@@ -60,6 +63,10 @@ const deletePlan = async (req, res) => {
     const { id } = req.params;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid plan ID provided.' });
+        }
+
         const plan = await Plan.findByIdAndDelete(id);
         if (!plan) {
             return res.status(404).json({ message: 'Plan not found' });
@@ -71,41 +78,72 @@ const deletePlan = async (req, res) => {
     }
 };
 
-// Add feature to a plan
+// Add a Feature to a Plan
 const addFeatureToPlan = async (req, res) => {
-    const { planId, featureId } = req.body;
+    const { planId, feature } = req.body;
+
+    if (!planId || !feature) {
+        return res.status(400).json({ message: 'Plan ID and feature data are required.' });
+    }
+
+    const { name, quota, description } = feature;
+
+    if (!name || !quota || !description) {
+        return res.status(400).json({ message: 'Feature name, quota, and description are required.' });
+    }
 
     try {
-        const plan = await Plan.findById(planId);
-        if (!plan) return res.status(404).json({ message: 'Plan not found' });
+        const newFeature = new Feature({ name, quota, description });
+        await newFeature.save();
 
-        plan.features.push(featureId);
-        await plan.save();
+        if (!mongoose.Types.ObjectId.isValid(planId)) {
+            return res.status(400).json({ message: 'Invalid plan ID provided.' });
+        }
 
-        console.log(`Success: Feature added to plan "${plan.name}".`);
-        res.status(200).json({ message: 'Feature added successfully' });
+        const updatedPlan = await Plan.findByIdAndUpdate(
+            planId,
+            { $addToSet: { features: newFeature._id } },
+            { new: true }
+        );
+
+        if (!updatedPlan) {
+            return res.status(404).json({ message: 'Plan not found.' });
+        }
+
+        res.status(200).json({ message: 'Feature added to plan successfully.', updatedPlan });
     } catch (error) {
-        console.error('Failed to add feature:', error.message);
-        res.status(500).json({ message: 'Failed to add feature', error: error.message });
+        console.error('Error adding feature to plan:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
-// Remove feature from a plan
+// Remove a Feature from a Plan
 const removeFeatureFromPlan = async (req, res) => {
     const { planId, featureId } = req.body;
 
+    if (!planId || !featureId) {
+        return res.status(400).json({ message: 'Plan ID and feature ID are required.' });
+    }
+
     try {
-        const plan = await Plan.findById(planId);
-        if (!plan) return res.status(404).json({ message: 'Plan not found' });
+        if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(featureId)) {
+            return res.status(400).json({ message: 'Invalid plan ID or feature ID provided.' });
+        }
 
-        plan.features.pull(featureId); // Remove the feature
-        await plan.save();
+        const updatedPlan = await Plan.findByIdAndUpdate(
+            planId,
+            { $pull: { features: featureId } },
+            { new: true }
+        );
 
-        console.log(`Success: Feature removed from plan "${plan.name}".`);
-        res.status(200).json({ message: 'Feature removed successfully' });
-    } catch (error) {
-        console.error('Failed to remove feature:', error.message);
-        res.status(500).json({ message: 'Failed to remove feature', error: error.message });
+        if (!updatedPlan) {
+            return res.status(404).json({ message: 'Plan not found' });
+        }
+
+        res.status(200).json({ message: 'Feature removed from plan successfully', updatedPlan });
+    } catch (err) {
+        console.error('Failed to remove feature from plan:', err.message);
+        res.status(500).json({ message: 'Failed to remove feature from plan', error: err.message });
     }
 };
 

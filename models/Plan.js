@@ -3,32 +3,32 @@ const mongoose = require('mongoose');
 const PlanSchema = new mongoose.Schema({
     name: {
         type: String,
-        enum: ['Basic', 'Premium', 'VIP'], // Only allow these values for plan name
+        enum: ['Basic', 'Premium', 'VIP'],
         required: true
     },
     description: {
         type: String,
-        required: true // Make sure description is required
+        required: true
     },
     price: {
         type: Number,
-        required: true // Price should be a required number
+        required: true
     },
     features: [{ 
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Feature' // Ensure features are ObjectIds referencing the 'Feature' model
+        ref: 'Feature'
     }],
     activeUsers: {
         type: Number,
-        default: 0 // Track number of active users on this plan
+        default: 0
     },
     createdAt: {
         type: Date,
-        default: Date.now // Auto-set creation date
+        default: Date.now
     },
     updatedAt: {
         type: Date,
-        default: Date.now // Auto-update the updated date
+        default: Date.now
     }
 });
 
