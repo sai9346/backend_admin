@@ -3,9 +3,6 @@ const dotenv = require('dotenv');
 const cors = require('cors'); // Import the cors package
 const connectDB = require('./config/db');
 const errorHandler = require('./utils/errorHandler');
-const billingRoutes = require('./routes/billingRoutes'); 
-const otpRoutes = require('./routes/otpRoutes'); 
-
 
 // Load environment variables
 dotenv.config();
@@ -16,9 +13,9 @@ connectDB();
 const app = express();
 app.use(express.json()); // To parse JSON bodies
 
-// Use CORS to allow requests from the frontend
+// Use CORS to allow requests from both localhost and Vercel frontend
 const corsOptions = {
-    origin: 'http://localhost:3000', // Allow requests from this origin
+    origin: ['http://localhost:3000', 'https://frontend-admin-murex.vercel.app'], // Allow requests from both localhost and Vercel
     credentials: true, // Allow cookies to be sent
 };
 
