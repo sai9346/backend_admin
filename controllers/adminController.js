@@ -201,5 +201,5 @@ module.exports = {
   bulkAssignPlans,
   viewAllPlans,
   modifyPlanDetails,
-  trackPlanUsers,
+  trackPlanUsers
 };

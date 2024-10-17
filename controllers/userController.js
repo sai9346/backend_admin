@@ -22,24 +22,40 @@ const getAllUsers = async (req, res) => {
 // Get User Profile
 const getUserProfile = async (req, res) => {
     try {
-      const user = await User.findById(req.params.id)
-        .populate('plan')
-        .populate('usageHistory')
-        .populate('billingHistory');
-  
-      if (!user) return res.status(404).json({ message: 'User not found' });
-  
-      const remainingQuotas = {
-        jobPosts: user.jobPostLimit - user.jobPostsUsed,
-        candidateSearches: user.candidateSearchLimit - user.candidateSearchesUsed,
-      };
-  
-      res.status(200).json({ user, remainingQuotas });
+        const userId = req.params.id;
+
+        // Validate userId
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ message: 'Invalid User ID' });
+        }
+
+        const user = await User.findById(userId)
+            .populate('plan')
+            .populate('usageHistory')
+            .populate('billingHistory');
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const remainingQuotas = {
+            jobPosts: user.jobPostLimit - user.jobPostsUsed,
+            candidateSearches: user.candidateSearchLimit - user.candidateSearchesUsed,
+            bulkMessages: user.bulkMessageLimit - user.bulkMessagesUsed,
+        };
+
+        const featureUsage = {
+            videoInterviews: user.videoInterviewsConducted || 0,
+        };
+
+        res.status(200).json({
+            user,
+            remainingQuotas,
+            featureUsage,
+        });
     } catch (err) {
-      console.error('Error fetching user profile:', err);
-      res.status(500).json({ error: err.message });
+        console.error('Error fetching user profile:', err);
+        res.status(500).json({ error: err.message });
     }
-  };
+};
 
 // Get Usage History
 const getUserUsageHistory = async (req, res) => {
@@ -149,8 +165,8 @@ const insertDummyData = async (req, res) => {
 
 module.exports = {
     getAllUsers,
+    getUserProfile, // Ensure getUserProfile is included here
     getUserUsageHistory,
-    getUserProfile,
     updateUserPlan,
     insertDummyData,
 };

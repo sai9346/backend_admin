@@ -18,20 +18,23 @@ exports.deactivateAccount = async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        // Set user as deactivated and clear plan/feature access
+        // Store previous plan/features for reactivation
+        user.previousPlan = user.plan; // Save current plan
+        user.previousFeatures = user.features; // Save current features
+
+        // Deactivate account
         user.isActive = false;
-        user.plan = null; // Assume user has a 'plan' field to store subscription info
-        user.features = []; // Assume 'features' field stores active feature list
+        user.plan = null; // Clear current plan
+        user.features = []; // Clear feature list
         await user.save();
 
-        // Real-time deactivation (In case of socket.io or real-time system, you'd emit an event)
-        // Example: emit user deactivation event
-        // io.emit('account-deactivated', { userId: user._id });
+        // Emit real-time event (assumed socket.io)
+        req.io.emit('account-deactivated', { userId: user._id });
 
-        // Send deactivation notification (to both user or recruiter based on role)
+        // Send notification
         await sendNotification(user.email, 'Account Deactivation', 'Your account has been deactivated.');
 
-        // Log the change for admin actions
+        // Log admin action
         await logChange(req.adminId, 'Account Deactivation', true);
 
         res.status(200).json({ message: 'Account deactivated successfully and user has lost access to features/plans.' });
@@ -57,24 +60,19 @@ exports.reactivateAccount = async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        // Restore plan and features if they existed before deactivation
-        const previousPlan = user.previousPlan || 'Basic'; // Retrieve the previous plan or default
-        const previousFeatures = user.previousFeatures || []; // Retrieve previous features or default
-
         // Reactivate account and restore previous settings
         user.isActive = true;
-        user.plan = previousPlan; // Restore the plan to its previous value
-        user.features = previousFeatures; // Restore the features to previous settings
+        user.plan = user.previousPlan || 'Basic'; // Restore or set to default
+        user.features = user.previousFeatures || []; // Restore features
         await user.save();
 
-        // Real-time reactivation (Emit event for real-time systems)
-        // Example: emit user reactivation event
-        // io.emit('account-reactivated', { userId: user._id });
+        // Emit real-time event (assumed socket.io)
+        req.io.emit('account-reactivated', { userId: user._id });
 
-        // Send reactivation notification (to both user or recruiter based on role)
+        // Send notification
         await sendNotification(user.email, 'Account Reactivation', 'Your account has been reactivated and previous settings restored.');
 
-        // Log the change for admin actions
+        // Log admin action
         await logChange(req.adminId, 'Account Reactivation', true);
 
         res.status(200).json({ message: 'Account reactivated successfully with previous plan/feature settings restored.' });

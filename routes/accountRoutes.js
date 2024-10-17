@@ -5,10 +5,7 @@ const {
     reactivateAccount,
 } = require('../controllers/accountController');
 
-// Deactivate user account
 router.post('/deactivate', deactivateAccount);
-
-// Reactivate user account
 router.post('/reactivate', reactivateAccount);
 
 module.exports = router;

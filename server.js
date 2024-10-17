@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors'); // Import the cors package
 const connectDB = require('./config/db');
 const errorHandler = require('./utils/errorHandler');
+const auditTrailRoutes = require('./routes/auditTrailRoutes'); 
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +32,7 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/billing', require('./routes/billingRoutes'));
 app.use('/api/otp', require('./routes/otpRoutes')); 
 app.use('/api/notifications', require('./routes/notificationRoutes')); // Ensure this matches the route
-
+app.use('/api', require('./routes/auditTrailRoutes'));  
 // Error handling middleware
 app.use(errorHandler);
 
