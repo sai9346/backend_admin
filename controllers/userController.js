@@ -19,12 +19,22 @@ const getAllUsers = async (req, res) => {
     }
 };
 
-// Get User Profile
+// Get All User Profiles (Minimal Info for Listing)
+const getAllUserProfiles = async (req, res) => {
+    try {
+        const users = await User.find().select('name email company contactNumber'); // Select only necessary fields
+        res.status(200).json(users);
+    } catch (err) {
+        console.error('Error fetching user profiles:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get Individual User Profile
 const getUserProfile = async (req, res) => {
     try {
         const userId = req.params.id;
 
-        // Validate userId
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({ message: 'Invalid User ID' });
         }
@@ -57,7 +67,7 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-// Get Usage History
+// Get User's Usage History
 const getUserUsageHistory = async (req, res) => {
     try {
         const usageHistory = await UsageHistory.findOne({ user: req.params.id })
@@ -74,9 +84,8 @@ const getUserUsageHistory = async (req, res) => {
 // Update User Plan
 const updateUserPlan = async (req, res) => {
     const { id } = req.params;
-    const { planId } = req.body; // Assuming planId is sent instead of name
+    const { planId } = req.body;
 
-    // Validate input
     if (!planId) {
         return res.status(400).json({ message: 'Plan ID is required' });
     }
@@ -84,7 +93,7 @@ const updateUserPlan = async (req, res) => {
     try {
         const updatedUser = await User.findByIdAndUpdate(
             id,
-            { plan: new mongoose.Types.ObjectId(planId) }, // Update the entire plan field
+            { plan: new mongoose.Types.ObjectId(planId) }, // Update the plan field with ObjectId
             { new: true }
         );
 
@@ -95,11 +104,11 @@ const updateUserPlan = async (req, res) => {
     }
 };
 
-// Insert Dummy Data
+// Insert Dummy Data for Users and Usage History
 const insertDummyData = async (req, res) => {
     try {
-        const basicPlanId = new mongoose.Types.ObjectId("66fab2decb72b34e0b4d1207"); // Correctly instantiate ObjectId
-        const premiumPlanId = new mongoose.Types.ObjectId("66fb85c2c67b889475c70207"); // Correctly instantiate ObjectId
+        const basicPlanId = new mongoose.Types.ObjectId("66fab2decb72b34e0b4d1207");
+        const premiumPlanId = new mongoose.Types.ObjectId("66fb85c2c67b889475c70207");
 
         const users = [
             {
@@ -165,7 +174,8 @@ const insertDummyData = async (req, res) => {
 
 module.exports = {
     getAllUsers,
-    getUserProfile, // Ensure getUserProfile is included here
+    getAllUserProfiles,
+    getUserProfile,
     getUserUsageHistory,
     updateUserPlan,
     insertDummyData,
