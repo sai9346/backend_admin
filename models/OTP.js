@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// Define the OTP schema
 const OTPSchema = new mongoose.Schema({
   otp: { type: String, required: true },
   recipient: { type: String, required: true },
@@ -8,4 +9,5 @@ const OTPSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now, expires: '5m' } // Valid for 5 minutes
 });
 
+// Export the OTP model
 module.exports = mongoose.model('OTP', OTPSchema);

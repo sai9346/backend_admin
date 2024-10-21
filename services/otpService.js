@@ -1,72 +1,78 @@
 const nodemailer = require('nodemailer');
-const twilio = require('twilio');
 const crypto = require('crypto');
-const OTP = require('../models/OTP'); // Ensure OTP model is defined
+const OTP = require('../models/OTP');
 const dotenv = require('dotenv');
 
-// Load environment variables
 dotenv.config();
 
-// Twilio credentials
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-// Email setup
+// Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: 'Gmail', // or your preferred email service
+  service: 'Gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-// Generate OTP and send email/SMS
-const generateAndSendOTP = async (recipient, adminId, action) => {
-  const otp = crypto.randomInt(100000, 999999).toString(); // Generate 6-digit OTP
+// Function to generate a random OTP
+const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
+// Function to send OTP to admin
+const sendOtpToAdmin = async (recipient, otp) => {
   try {
-    // Save OTP in the database with adminId and action
-    await OTP.create({ otp, recipient, adminId, action });
-
-    // Send OTP via Email
-    await transporter.sendMail({
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
       to: recipient,
       subject: 'Your OTP Code',
       text: `Your OTP code is ${otp}. It is valid for 5 minutes.`,
-    });
+    };
 
-    // Uncomment if SMS is needed
-    /*
-    await twilioClient.messages.create({
-      body: `Your OTP code is ${otp}. It is valid for 5 minutes.`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: recipient,
-    });
-    */
+    // Send the email
+    await transporter.sendMail(mailOptions);
+    console.log('OTP email sent successfully');
   } catch (error) {
-    console.error('Error generating or sending OTP:', error);
-    throw new Error('Could not send OTP'); // Rethrow to handle in controller
+    console.error('Error sending OTP:', error.message || error);
+    throw new Error('Error sending OTP');
   }
 };
 
-// Validate OTP
-const validateOTP = async (recipient, otp, adminId, action) => {
-  try {
-    const otpRecord = await OTP.findOne({ recipient, otp, adminId, action });
+// Function to generate OTP, send it, and save it in the database
+const generateAndSendOTP = async (adminEmail, userId, action) => {
+  // Only generate and send OTP if the action is initiated by an admin
+  const otp = generateOTP();
 
-    if (!otpRecord) {
-      return false; // Invalid OTP
+  // Send OTP to admin
+  await sendOtpToAdmin(adminEmail, otp);
+
+  // Save OTP record in the database
+  const otpRecord = new OTP({
+    recipient: adminEmail,
+    otp,
+    userId,
+    action,
+    createdAt: Date.now(),
+  });
+
+  await otpRecord.save();
+  return otp;
+};
+
+// Function to validate OTP
+const validateOTP = async (recipient, otp, userId, action) => {
+  try {
+    // Check if OTP exists and is not expired
+    const otpRecord = await OTP.findOne({ recipient, otp, userId, action });
+    if (!otpRecord || Date.now() - otpRecord.createdAt > 300000) { // OTP expires in 5 minutes
+      return false;
     }
 
-    // OTP is valid, delete it after verification
+    // OTP is valid, delete it after usage
     await OTP.deleteOne({ _id: otpRecord._id });
-    return true; // Valid OTP
+    return true;
   } catch (error) {
-    console.error('Error validating OTP:', error);
-    return false; // Return false on error
+    console.error('Error validating OTP:', error.message || error);
+    return false;
   }
 };
 
-module.exports = {
-  generateAndSendOTP,
-  validateOTP,
-};
+module.exports = { generateAndSendOTP, validateOTP };
