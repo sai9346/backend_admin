@@ -1,23 +1,38 @@
-// models/User.js
 const mongoose = require('mongoose');
 
-const UserSchema = new mongoose.Schema({
+// Define the User schema
+const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  type: { type: String, enum: ['Recruiter', 'User'], required: true },
+  plan: { type: String, enum: ['Basic', 'Premium', 'VIP'], required: true },
+  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   company: { type: String, required: true },
-  contactNumber: { type: String, required: true },
-  plan: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Plan', // Assuming you have a Plan model
-  },
-  jobPostLimit: { type: Number, default: 10 },
-  jobPostsUsed: { type: Number, default: 0 },
-  candidateSearchLimit: { type: Number, default: 20 },
-  candidateSearchesUsed: { type: Number, default: 0 },
-  bulkMessageLimit: { type: Number, default: 5 },
-  bulkMessagesUsed: { type: Number, default: 0 },
-  videoInterviewsConducted: { type: Number, default: 0 },
+  phone: { type: String, required: true },
+  planExpiration: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  quotas: {
+    jobPosts: {
+      used: { type: Number, default: 0 },
+      total: { type: Number, required: true }
+    },
+    bulkMessages: {
+      used: { type: Number, default: 0 },
+      total: { type: Number, required: true }
+    },
+    candidateSearches: {
+      used: { type: Number, default: 0 },
+      total: { type: Number, required: true }
+    },
+    videoInterviews: {
+      used: { type: Number, default: 0 },
+      total: { type: Number, required: true }
+    }
+  }
 });
 
-const User = mongoose.model('User', UserSchema);
+// Create and export the User model
+const User = mongoose.model('User', userSchema);
+
 module.exports = User;

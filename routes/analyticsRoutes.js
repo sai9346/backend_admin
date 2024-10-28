@@ -40,4 +40,5 @@ router.get('/upgrade-downgrade-trends', async (req, res) => {
 // Get general analytics data
 router.get('/', getAnalyticsData);
 
+
 module.exports = router;

@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const Plan = require('../models/Plan');
-const FeatureUsage = require('../models/FeatureUsage'); // Assuming you have a model for feature usage
-const PlanChangeLog = require('../models/PlanChangeLog'); // Assuming you have a model for tracking plan changes
+const FeatureUsage = require('../models/FeatureUsage');
+const PlanChangeLog = require('../models/PlanChangeLog');
 const moment = require('moment');
 
 // Plan usage reports
@@ -16,7 +16,7 @@ exports.planUsageReports = async () => {
             },
             { 
                 $lookup: {
-                    from: "plans", // Assuming the plans are stored in a collection named 'plans'
+                    from: "plans",
                     localField: "_id",
                     foreignField: "_id",
                     as: "planDetails"
@@ -36,7 +36,6 @@ exports.planUsageReports = async () => {
             }
         ]);
 
-        // Calculate revenue from each plan
         const revenueData = await Promise.all(planUsage.map(async (plan) => {
             const planDetails = await Plan.findById(plan._id);
             return {
@@ -46,10 +45,10 @@ exports.planUsageReports = async () => {
             };
         }));
 
-        return revenueData; // Return data instead of sending response here
+        return revenueData;
     } catch (error) {
         console.error('Error fetching plan usage reports:', error);
-        throw error; // Throw error to be caught in the calling function
+        throw error;
     }
 };
 
@@ -65,10 +64,10 @@ exports.featureUsageReports = async () => {
             }
         ]);
 
-        return featureUsage; // Return data instead of sending response here
+        return featureUsage;
     } catch (error) {
         console.error('Error fetching feature usage reports:', error);
-        throw error; // Throw error to be caught in the calling function
+        throw error;
     }
 };
 
@@ -78,7 +77,7 @@ exports.planUpgradeDowngradeTrends = async () => {
         const trends = await PlanChangeLog.aggregate([
             { 
                 $match: { 
-                    changeDate: { $gte: moment().subtract(1, 'month').toDate() } // Ensure date is in Date format
+                    changeDate: { $gte: moment().subtract(1, 'month').toDate() } 
                 } 
             },
             { 
@@ -89,7 +88,7 @@ exports.planUpgradeDowngradeTrends = async () => {
             },
             { 
                 $lookup: {
-                    from: "plans", // Assuming the plans are stored in a collection named 'plans'
+                    from: "plans",
                     localField: "_id",
                     foreignField: "_id",
                     as: "planDetails"
@@ -97,16 +96,16 @@ exports.planUpgradeDowngradeTrends = async () => {
             },
             { 
                 $project: {
-                    plan: { $arrayElemAt: ["$planDetails.name", 0] }, // Safely retrieve plan name
+                    plan: { $arrayElemAt: ["$planDetails.name", 0] },
                     count: 1
                 }
             }
         ]);
 
-        return trends; // Return data instead of sending response here
+        return trends;
     } catch (error) {
         console.error('Error fetching plan upgrade/downgrade trends:', error);
-        throw error; // Throw error to be caught in the calling function
+        throw error;
     }
 };
 
@@ -114,7 +113,7 @@ exports.planUpgradeDowngradeTrends = async () => {
 exports.getAnalyticsData = async (req, res) => {
     try {
         const analyticsData = {
-            planUsage: await exports.planUsageReports(), // Call the specific report functions
+            planUsage: await exports.planUsageReports(),
             featureUsage: await exports.featureUsageReports(),
             planTrends: await exports.planUpgradeDowngradeTrends(),
         };

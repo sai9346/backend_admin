@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors'); // Import the cors package
@@ -33,13 +34,14 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/billing', require('./routes/billingRoutes'));
 app.use('/api/otp', require('./routes/otpRoutes')); 
 app.use('/api/notifications', require('./routes/notificationRoutes')); // Ensure this matches the route
-app.use('/api', require('./routes/auditTrailRoutes')); 
-app.use('/api/plan', planChangeLogRoutes); 
-// Error handling middleware
+app.use('/api/audit-trail', auditTrailRoutes);
+app.use('/api/plan-change-log', planChangeLogRoutes);
+
+// Error handler middleware
 app.use(errorHandler);
 
+// Start server
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

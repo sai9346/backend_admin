@@ -1,28 +1,67 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Plan = require('../models/Plan');
 const UsageHistory = require('../models/UsageHistory');
+const { sendNotification } = require('../services/notificationService');
 
-// Get All Users/Recruiters
+// Function to create a new user
+const createUser = async (req, res) => {
+    try {
+        const { name, email, password, type, plan, company, phone, planExpiration, quotas } = req.body;
+
+        const newUser = new User({
+            name,
+            email,
+            password, // Hash the password before saving in a real application
+            type,
+            plan,
+            company,
+            phone,
+            planExpiration,
+            quotas,
+        });
+
+        await newUser.save();
+
+        // Create a usage history record for the new user
+        const usageHistory = new UsageHistory({ user: newUser._id });
+        await usageHistory.save();
+
+        res.status(201).json({
+            message: 'User created successfully',
+            user: newUser,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Error creating user',
+            error: error.message,
+        });
+    }
+};
+
+// Get all users/recruiters
 const getAllUsers = async (req, res) => {
     const { plan, createdAt, status } = req.query;
 
     try {
         let filters = {};
-        if (plan) filters.plan = new mongoose.Types.ObjectId(plan); // Correctly instantiate ObjectId
-        if (status) filters.accountStatus = status === 'active'; // Convert to boolean
+        if (plan) filters.plan = plan;
+        if (status) filters.status = status === 'Active' ? 'Active' : 'Inactive';
         if (createdAt) filters.createdAt = { $gte: new Date(createdAt) };
 
         const users = await User.find(filters).populate('plan');
         res.status(200).json(users);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 };
 
-// Get All User Profiles (Minimal Info for Listing)
+// Get all user profiles (minimal info for listing)
 const getAllUserProfiles = async (req, res) => {
     try {
-        const users = await User.find().select('name email company contactNumber'); // Select only necessary fields
+        const users = await User.find().select('name email company phone');
         res.status(200).json(users);
     } catch (err) {
         console.error('Error fetching user profiles:', err);
@@ -30,7 +69,7 @@ const getAllUserProfiles = async (req, res) => {
     }
 };
 
-// Get Individual User Profile
+// Get individual user profile
 const getUserProfile = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -47,19 +86,15 @@ const getUserProfile = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const remainingQuotas = {
-            jobPosts: user.jobPostLimit - user.jobPostsUsed,
-            candidateSearches: user.candidateSearchLimit - user.candidateSearchesUsed,
-            bulkMessages: user.bulkMessageLimit - user.bulkMessagesUsed,
-        };
-
-        const featureUsage = {
-            videoInterviews: user.videoInterviewsConducted || 0,
+            jobPosts: user.quotas.jobPosts.total - user.quotas.jobPosts.used,
+            candidateSearches: user.quotas.candidateSearches.total - user.quotas.candidateSearches.used,
+            bulkMessages: user.quotas.bulkMessages.total - user.quotas.bulkMessages.used,
+            videoInterviews: user.quotas.videoInterviews.total - user.quotas.videoInterviews.used,
         };
 
         res.status(200).json({
             user,
             remainingQuotas,
-            featureUsage,
         });
     } catch (err) {
         console.error('Error fetching user profile:', err);
@@ -67,7 +102,7 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-// Get User's Usage History
+// Get user's usage history
 const getUserUsageHistory = async (req, res) => {
     try {
         const usageHistory = await UsageHistory.findOne({ user: req.params.id })
@@ -77,11 +112,12 @@ const getUserUsageHistory = async (req, res) => {
         if (!usageHistory) return res.status(404).json({ message: 'Usage history not found' });
         res.status(200).json(usageHistory);
     } catch (err) {
+        console.error('Error fetching usage history:', err);
         res.status(500).json({ error: err.message });
     }
 };
 
-// Update User Plan
+// Update user plan
 const updateUserPlan = async (req, res) => {
     const { id } = req.params;
     const { planId } = req.body;
@@ -93,90 +129,100 @@ const updateUserPlan = async (req, res) => {
     try {
         const updatedUser = await User.findByIdAndUpdate(
             id,
-            { plan: new mongoose.Types.ObjectId(planId) }, // Update the plan field with ObjectId
+            { plan: planId },
             { new: true }
         );
 
         if (!updatedUser) return res.status(404).json({ message: 'User not found' });
         res.status(200).json(updatedUser);
     } catch (error) {
+        console.error('Error updating user plan:', error);
         res.status(500).json({ message: 'Error updating user plan', error: error.message });
     }
 };
 
-// Insert Dummy Data for Users and Usage History
-const insertDummyData = async (req, res) => {
+// Assign/Change Plan for a single user
+const assignChangePlan = async (req, res) => {
+    const { userId, planId } = req.body;
+
+    if (!userId || !planId) {
+        return res.status(400).json({ message: 'User ID and Plan ID are required' });
+    }
+
     try {
-        const basicPlanId = new mongoose.Types.ObjectId("66fab2decb72b34e0b4d1207");
-        const premiumPlanId = new mongoose.Types.ObjectId("66fb85c2c67b889475c70207");
+        const user = await User.findById(userId);
+        const plan = await Plan.findById(planId);
 
-        const users = [
-            {
-                name: "John Doe",
-                email: "john.doe@example.com",
-                plan: basicPlanId,
-                contactNumber: "1234567890",
-                accountStatus: "active",
-                createdAt: new Date(),
-                jobPostLimit: 10,
-                jobPostsUsed: 3,
-                candidateSearchLimit: 5,
-                candidateSearchesUsed: 2,
-            },
-            {
-                name: "Jane Smith",
-                email: "jane.smith@example.com",
-                plan: premiumPlanId,
-                contactNumber: "0987654321",
-                accountStatus: "inactive",
-                createdAt: new Date(),
-                jobPostLimit: 20,
-                jobPostsUsed: 10,
-                candidateSearchLimit: 10,
-                candidateSearchesUsed: 5,
-            },
-        ];
+        if (!user || !plan) {
+            return res.status(404).json({ message: 'User or Plan not found' });
+        }
 
-        const createdUsers = await User.insertMany(users);
+        // Assign new plan
+        user.plan = planId;
+        await user.save();
 
-        const usageHistories = [
-            {
-                user: createdUsers[0]._id,
-                notifications: ["Email sent to user"],
-                planHistory: [
-                    {
-                        plan: basicPlanId,
-                        startDate: new Date(),
-                        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                    },
-                ],
-            },
-            {
-                user: createdUsers[1]._id,
-                notifications: ["SMS sent to user"],
-                planHistory: [
-                    {
-                        plan: premiumPlanId,
-                        startDate: new Date(),
-                        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                    },
-                ],
-            },
-        ];
+        // Send notification
+        const message = `Your plan has been assigned/changed to ${plan.name}.`;
+        await sendNotification(user.email, message);
 
-        await UsageHistory.insertMany(usageHistories);
-
-        res.status(201).json({ message: 'Dummy data inserted successfully', createdUsers });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(200).json({ message: 'Plan assigned/changed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error assigning/changing plan', error });
     }
 };
 
+// Bulk Assign Plans
+const bulkAssignPlans = async (req, res) => {
+    const { userIds, planId } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !planId) {
+        return res.status(400).json({ message: 'User IDs must be an array and Plan ID is required' });
+    }
+
+    try {
+        const plan = await Plan.findById(planId);
+
+        if (!plan) {
+            return res.status(404).json({ message: 'Plan not found' });
+        }
+
+        // Find all users and assign the plan
+        const users = await User.find({ _id: { $in: userIds } });
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No users found for the provided IDs' });
+        }
+
+        const notifications = [];
+
+        for (const user of users) {
+            user.plan = planId;
+            await user.save();
+
+            // Prepare notification message
+            notifications.push({
+                email: user.email,
+                message: `Your plan has been assigned/changed to ${plan.name}.`,
+            });
+        }
+
+        // Send bulk notifications
+        await Promise.all(notifications.map(({ email, message }) => sendNotification(email, message)));
+
+        res.status(200).json({ message: 'Plans assigned successfully to users' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error bulk assigning plans', error });
+    }
+};
+
+// Export functions
 module.exports = {
+    createUser,
     getAllUsers,
     getAllUserProfiles,
     getUserProfile,
     getUserUsageHistory,
     updateUserPlan,
-    insertDummyData,
+    assignChangePlan,
+    bulkAssignPlans,
 };
