@@ -147,6 +147,26 @@ const removeFeatureFromPlan = async (req, res) => {
     }
 };
 
+// Fetch Features for a Plan
+const fetchFeatures = async (req, res) => {
+    const { planId } = req.params;
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(planId)) {
+            return res.status(400).json({ message: 'Invalid plan ID provided.' });
+        }
+
+        const plan = await Plan.findById(planId).populate('features');
+        if (!plan) {
+            return res.status(404).json({ message: 'Plan not found' });
+        }
+
+        res.status(200).json({ features: plan.features });
+    } catch (err) {
+        console.error('Failed to fetch features:', err.message);
+        res.status(500).json({ message: 'Failed to fetch features', error: err.message });
+    }
+};
 
 module.exports = {
     viewPlans,
@@ -155,4 +175,5 @@ module.exports = {
     deletePlan,
     addFeatureToPlan,
     removeFeatureFromPlan,
+    fetchFeatures 
 };

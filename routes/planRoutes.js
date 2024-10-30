@@ -14,6 +14,7 @@ router.put('/:id/update-plan', planController.updatePlan);
 // Feature actions
 router.post('/add-feature', planController.addFeatureToPlan);
 router.delete('/remove-feature', planController.removeFeatureFromPlan);
+router.get('/:planId/features', planController.fetchFeatures); 
 
 
 module.exports = router;

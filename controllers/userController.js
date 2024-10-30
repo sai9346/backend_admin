@@ -4,6 +4,36 @@ const Plan = require('../models/Plan');
 const UsageHistory = require('../models/UsageHistory');
 const { sendNotification } = require('../services/notificationService');
 
+// Update User Quotas
+const updateUserQuotas = async (req, res) => {
+    const { userId, quotas } = req.body;
+
+    if (!userId || !quotas) {
+        return res.status(400).json({ message: 'User ID and quotas are required' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update user quotas
+        user.quotas.jobPosts.total = quotas.jobPosts.total || user.quotas.jobPosts.total;
+        user.quotas.bulkMessages.total = quotas.bulkMessages.total || user.quotas.bulkMessages.total;
+        user.quotas.candidateSearches.total = quotas.candidateSearches.total || user.quotas.candidateSearches.total;
+        user.quotas.videoInterviews.total = quotas.videoInterviews.total || user.quotas.videoInterviews.total;
+
+        await user.save();
+
+        res.status(200).json({ message: 'User quotas updated successfully', user });
+    } catch (error) {
+        console.error('Error updating user quotas:', error);
+        res.status(500).json({ message: 'Error updating user quotas', error: error.message });
+    }
+};
+
 // Function to create a new user
 const createUser = async (req, res) => {
     try {
@@ -218,6 +248,7 @@ const bulkAssignPlans = async (req, res) => {
 // Export functions
 module.exports = {
     createUser,
+    updateUserQuotas,
     getAllUsers,
     getAllUserProfiles,
     getUserProfile,

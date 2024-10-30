@@ -1,13 +1,13 @@
-const mongoose = require('mongoose');
+// models/Otp.js
+const mongoose = require("mongoose");
 
-// Define the OTP schema
-const OTPSchema = new mongoose.Schema({
-  otp: { type: String, required: true },
-  recipient: { type: String, required: true },
-  adminId: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store admin ID
-  action: { type: String, required: true }, // Action for which OTP is generated
-  createdAt: { type: Date, default: Date.now, expires: '5m' } // Valid for 5 minutes
+const otpSchema = new mongoose.Schema({
+  otpCode: { type: String, required: true },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  actionType: { type: String, enum: ['deactivate', 'reactivate', 'planChange'], required: true },
+  expirationTime: { type: Date, required: true },
+  status: { type: String, enum: ['pending', 'validated', 'expired'], default: 'pending' }
 });
 
-// Export the OTP model
-module.exports = mongoose.model('OTP', OTPSchema);
+module.exports = mongoose.model("Otp", otpSchema);

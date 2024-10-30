@@ -6,7 +6,8 @@ const {
   getAllUserProfiles,
   createUser,
   assignChangePlan,
-  bulkAssignPlans
+  bulkAssignPlans,
+  updateUserQuotas // Import the new method
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.post('/assign-plan', assignChangePlan);
 
 // Bulk Assign Plans
 router.post('/bulk-assign-plans', bulkAssignPlans);
+
+// Update user quotas
+router.patch('/update-quotas', updateUserQuotas); // Add this line for updating quotas
 
 module.exports = router;

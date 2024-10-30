@@ -1,7 +1,9 @@
+// controllers/notificationController.js
 const { sendNotification } = require('../services/notificationService');
-const Notification = require('../models/Notification'); // Import the Notification model
+const Notification = require('../models/Notification');
+const Billing = require('../models/Billing');
+const User = require('../models/User');
 
-// Helper function to save notification
 const saveNotification = async (userId, message, type) => {
     const notification = new Notification({ user: userId, message, type });
     await notification.save();
@@ -67,8 +69,32 @@ const getNotificationsLog = async (req, res) => {
     }
 };
 
+// Function to handle user deactivation
+const deactivateUser = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    user.isActive = false; // Assuming there's an isActive field
+    await user.save();
+
+    const message = 'Your account has been deactivated. Please contact support for further assistance.';
+    await sendUserNotification({ userId, message, type: 'email' });
+};
+
+// Function to notify users of new features
+const sendFeatureUpdateNotification = async (planId, feature) => {
+    const billings = await Billing.find({ plan: planId }).populate('user');
+    
+    for (const billing of billings) {
+        const message = `The plan has been updated to include the new feature: ${feature}.`;
+        await sendUserNotification({ userId: billing.user._id, message, type: 'email' });
+    }
+};
+
 module.exports = {
     sendUserNotification,
     sendBulkNotifications,
     getNotificationsLog,
+    deactivateUser,
+    sendFeatureUpdateNotification
 };

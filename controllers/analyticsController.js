@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Plan = require('../models/Plan');
 const FeatureUsage = require('../models/FeatureUsage');
@@ -17,8 +18,16 @@ exports.planUsageReports = async () => {
             { 
                 $lookup: {
                     from: "plans",
-                    localField: "_id",
-                    foreignField: "_id",
+                    let: { planId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", { $toObjectId: "$$planId" }]
+                                }
+                            }
+                        }
+                    ],
                     as: "planDetails"
                 }
             },
@@ -36,8 +45,9 @@ exports.planUsageReports = async () => {
             }
         ]);
 
+        // Fetch revenue data by mapping through the planUsage
         const revenueData = await Promise.all(planUsage.map(async (plan) => {
-            const planDetails = await Plan.findById(plan._id);
+            const planDetails = await Plan.findById(mongoose.Types.ObjectId(plan._id));
             return {
                 plan: planDetails ? planDetails.name : "Unknown Plan",
                 count: plan.count,
@@ -89,8 +99,16 @@ exports.planUpgradeDowngradeTrends = async () => {
             { 
                 $lookup: {
                     from: "plans",
-                    localField: "_id",
-                    foreignField: "_id",
+                    let: { planId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", { $toObjectId: "$$planId" }]
+                                }
+                            }
+                        }
+                    ],
                     as: "planDetails"
                 }
             },

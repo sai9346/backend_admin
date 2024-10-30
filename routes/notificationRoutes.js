@@ -7,6 +7,6 @@ const router = express.Router();
 // Notification actions
 router.post('/send', notificationController.sendUserNotification);
 router.post('/send-bulk', notificationController.sendBulkNotifications);
-router.get('/notificationsLog', notificationController.getNotificationsLog);
+router.get('/log', notificationController.getNotificationsLog);
 
 module.exports = router;

@@ -26,8 +26,6 @@ const sendOtpToAdmin = async (recipient, otp) => {
       subject: 'Your OTP Code',
       text: `Your OTP code is ${otp}. It is valid for 5 minutes.`,
     };
-
-    // Send the email
     await transporter.sendMail(mailOptions);
     console.log('OTP email sent successfully');
   } catch (error) {
@@ -38,19 +36,14 @@ const sendOtpToAdmin = async (recipient, otp) => {
 
 // Function to generate OTP, send it, and save it in the database
 const generateAndSendOTP = async (adminEmail, userId, action) => {
-  // Only generate and send OTP if the action is initiated by an admin
   const otp = generateOTP();
-
-  // Send OTP to admin
   await sendOtpToAdmin(adminEmail, otp);
 
-  // Save OTP record in the database
   const otpRecord = new OTP({
     recipient: adminEmail,
     otp,
     userId,
     action,
-    createdAt: Date.now(),
   });
 
   await otpRecord.save();
@@ -60,14 +53,10 @@ const generateAndSendOTP = async (adminEmail, userId, action) => {
 // Function to validate OTP
 const validateOTP = async (recipient, otp, userId, action) => {
   try {
-    // Check if OTP exists and is not expired
     const otpRecord = await OTP.findOne({ recipient, otp, userId, action });
-    if (!otpRecord || Date.now() - otpRecord.createdAt > 300000) { // OTP expires in 5 minutes
-      return false;
-    }
+    if (!otpRecord) return false;
 
-    // OTP is valid, delete it after usage
-    await OTP.deleteOne({ _id: otpRecord._id });
+    await OTP.deleteOne({ _id: otpRecord._id }); // Delete OTP after usage
     return true;
   } catch (error) {
     console.error('Error validating OTP:', error.message || error);
